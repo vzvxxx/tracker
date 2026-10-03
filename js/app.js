@@ -53,6 +53,11 @@ async function start() {
   await db.seedIfEmpty({ emotions: seedEmotions(), bodyItems: seedBodyItems() });
   db.requestPersistence();
   await ctx.refresh();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      // без service worker трекер работает, только не офлайн
+    });
+  }
 }
 
 start();
