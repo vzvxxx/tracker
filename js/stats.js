@@ -25,11 +25,16 @@ export function groupByDay(entries) {
     .map(([day, list]) => ({ day, entries: list.sort((a, b) => (a.time < b.time ? 1 : -1)) }));
 }
 
+// Средняя с одним знаком после запятой. Половинки — от нуля, как в школе:
+// −0,25 → −0,3 и +0,25 → +0,3 (Math.round округлил бы −0,25 в −0,2, то есть приукрасил).
+function averageTenths(scores) {
+  const q = (scores.reduce((sum, v) => sum + v, 0) / scores.length) * 10;
+  return (Math.sign(q) * Math.round(Math.abs(q))) / 10 || 0; // «|| 0» убирает «−0»
+}
+
 export function daySummary(entries, emotionsById, bodyById) {
   const scores = entries.map((e) => e.coping).filter((v) => v !== null);
-  const copingAvg = scores.length
-    ? Math.round((scores.reduce((sum, v) => sum + v, 0) / scores.length) * 10) / 10
-    : null;
+  const copingAvg = scores.length ? averageTenths(scores) : null;
 
   let load = 0;
   let light = 0;

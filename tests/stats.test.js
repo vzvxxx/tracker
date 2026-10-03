@@ -37,6 +37,16 @@ test('итог дня считается по всем слоям', () => {
   assertEqual(s.tears, { count: 2, max: 'sobbed' });
 });
 
+test('средняя: половинки округляются от нуля, одинаково для плюса и минуса', () => {
+  const avg = (scores) => daySummary(scores.map((coping) => entry({ coping })), emotionsById, bodyById).copingAvg;
+  assertEqual(avg([2, 3, -2, -4]), -0.3, '−0,25 → −0,3');
+  assertEqual(avg([-1, 0, 0, 0]), -0.3, '−0,25 → −0,3');
+  assertEqual(avg([1, 0, 0, 0]), 0.3, '+0,25 → +0,3');
+  const twenty = [5, 5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  assertEqual(avg(twenty), 1.2, '1,15 → 1,2');
+  assert(Object.is(avg([-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 0), 'почти ноль — ровно 0, без «−0»');
+});
+
 test('итог пустого дня', () => {
   assertEqual(daySummary([], emotionsById, bodyById), {
     count: 0, copingAvg: null, copingMin: null, copingMax: null, hasEmotions: false,
