@@ -144,9 +144,13 @@ export function renderEntry(root, ctx, editId) {
     h('p', { class: 'subtitle' }, 'с тем, что чувствую'),
     scale(draft.coping, (v) => change(() => { draft.coping = toggleCoping(draft.coping, v); })),
     h('p', { class: 'label' }, 'Что внутри'),
+    // Тяжёлые и лёгкие — каждая группа со своей строки, чтобы не перемешивались.
     h('div', { class: 'chips' },
-      favorites.map(chip),
-      extra.map(chip),
+      favorites.filter((em) => em.type === 'heavy').map(chip),
+      extra.filter((em) => em.type === 'heavy').map(chip)),
+    h('div', { class: 'chips' },
+      favorites.filter((em) => em.type === 'light').map(chip),
+      extra.filter((em) => em.type === 'light').map(chip),
       h('button', {
         type: 'button',
         class: 'chip chip--plain chip--more',

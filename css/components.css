@@ -31,6 +31,7 @@
    Толщина рамки у всех «таблеток» одна (1px), у сильной рамка «толще» за счёт тени:
    тень не занимает места, поэтому размер не меняется и ничего не прыгает. */
 .chips { display: flex; flex-wrap: wrap; gap: 12px 6px; padding-top: 10px; }
+.chips + .chips { padding-top: 12px; } /* вторая группа — тот же шаг, что между рядами */
 .chip {
   position: relative;
   display: inline-flex;
