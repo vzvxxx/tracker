@@ -142,11 +142,13 @@ export function renderEntry(root, ctx, editId) {
 
   mount(root,
     h('header', { class: 'entry-head' }, h('h1', {}, edit ? 'Запись' : 'Новая запись'), timeInput),
-    isMixed(draft, emotionsById) ? h('span', { class: 'badge-mixed' }, 'смешанно') : null,
     h('h2', { class: 'label' }, 'Как я справляюсь'),
     h('p', { class: 'subtitle' }, 'с тем, что чувствую'),
     scale(draft.coping, (v) => change(() => { draft.coping = toggleCoping(draft.coping, v); })),
-    h('p', { class: 'label' }, 'Что внутри'),
+    // Метка «смешанно» — справа на строке «Что внутри»: строка есть всегда, поэтому ничего не сдвигается.
+    h('div', { class: 'label-row' },
+      h('p', { class: 'label' }, 'Что внутри'),
+      isMixed(draft, emotionsById) ? h('span', { class: 'badge-mixed' }, 'смешанно') : null),
     // Тяжёлые и лёгкие — каждая группа со своей строки, чтобы не перемешивались.
     h('div', { class: 'chips' },
       favorites.filter((em) => em.type === 'heavy').map(chip),

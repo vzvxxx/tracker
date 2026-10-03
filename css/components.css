@@ -111,8 +111,10 @@
 
 /* ---------- Экран записи ---------- */
 .entry-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.badge-mixed { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; background: var(--mixed-bg); color: var(--mixed-fg); }
-.entry-head + .badge-mixed { margin-top: var(--space-2); }
+.badge-mixed { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; line-height: 16px; background: var(--mixed-bg); color: var(--mixed-fg); }
+/* Строка «Что внутри» всегда высотой с метку, поэтому появление метки ничего не сдвигает. */
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 20px; margin-top: var(--space-4); }
+.label-row .label { margin: 0; }
 .save-area { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
 .full-list { border-top: 1px solid var(--color-line); margin-top: var(--space-3); }
 
