@@ -1,5 +1,5 @@
 import { test, assert, assertEqual } from './runner.js';
-import { isMixed, groupByDay, daySummary } from '../js/stats.js';
+import { isMixed, groupByDay, daySummary, usageCounts } from '../js/stats.js';
 
 const at = (d, h, m) => new Date(2026, 9, d, h, m).toISOString();
 const emotions = [
@@ -45,6 +45,17 @@ test('средняя: половинки округляются от нуля, �
   const twenty = [5, 5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   assertEqual(avg(twenty), 1.2, '1,15 → 1,2');
   assert(Object.is(avg([-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 0), 'почти ноль — ровно 0, без «−0»');
+});
+
+test('сколько записей используют эмоцию и пункт «Тела»', () => {
+  const u = usageCounts([e1, e2, e3, e4]);
+  assertEqual(u.emotions.get('A'), 2, 'тревога в двух записях');
+  assertEqual(u.emotions.get('B'), 1);
+  assertEqual(u.emotions.get('C'), 2);
+  assertEqual(u.emotions.get('Z'), undefined, 'нигде не отмечена — можно удалить');
+  assertEqual(u.body.get('X'), 2);
+  assertEqual(u.body.get('Y'), 1);
+  assertEqual(usageCounts([]).emotions.size, 0);
 });
 
 test('итог пустого дня', () => {

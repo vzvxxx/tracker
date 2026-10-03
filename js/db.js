@@ -63,6 +63,8 @@ export const putDaySummary = (summary) => put('daySummaries', summary);
 export const deleteDaySummary = (id) => remove('daySummaries', id);
 export const putEmotion = (emotion) => put('emotions', emotion);
 export const putBodyItem = (item) => put('bodyItems', item);
+export const deleteEmotion = (id) => remove('emotions', id);
+export const deleteBodyItem = (id) => remove('bodyItems', id);
 
 export async function exportAll() {
   const d = await open();

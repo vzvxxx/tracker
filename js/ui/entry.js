@@ -31,6 +31,9 @@ export function renderEntry(root, ctx, editId) {
   const change = (fn) => { fn(); ui.error = ''; rerender(); };
 
   const emotionsById = new Map(ctx.store.emotions.map((e) => [e.id, e]));
+  // Пока черновик ждал, эмоцию или пункт «Тела» могли удалить в «Ещё»: убираем ссылки в никуда.
+  draft.emotions = draft.emotions.filter((x) => emotionsById.has(x.emotionId));
+  draft.body = draft.body.filter((id) => ctx.store.bodyItems.some((b) => b.id === id));
   const visible = ctx.store.emotions.filter((e) => !e.hidden).sort(byOrder);
   const favorites = [
     ...visible.filter((e) => e.favorite && e.type === 'heavy'),

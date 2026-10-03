@@ -84,3 +84,15 @@ export function daySummary(entries, emotionsById, bodyById) {
     tears,
   };
 }
+
+// Сколько записей ссылаются на каждую эмоцию и каждый пункт «Тела».
+// То, чего нет ни в одной записи, можно удалить насовсем: старые записи не пострадают.
+export function usageCounts(entries) {
+  const emotions = new Map();
+  const body = new Map();
+  for (const e of entries) {
+    for (const x of e.emotions) emotions.set(x.emotionId, (emotions.get(x.emotionId) ?? 0) + 1);
+    for (const id of e.body) body.set(id, (body.get(id) ?? 0) + 1);
+  }
+  return { emotions, body };
+}

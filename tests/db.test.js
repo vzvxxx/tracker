@@ -58,6 +58,18 @@ test('база: неудачный replaceAll ничего не меняет', a
   assertEqual(await db.exportAll(), before);
 });
 
+test('база: эмоция и пункт «Тела» удаляются насовсем', async () => {
+  const em = seedEmotions()[1];
+  const b = seedBodyItems()[0];
+  await db.putEmotion(em);
+  await db.putBodyItem(b);
+  await db.deleteEmotion(em.id);
+  await db.deleteBodyItem(b.id);
+  const all = await db.exportAll();
+  assert(!all.emotions.some((x) => x.id === em.id), 'эмоции нет');
+  assert(!all.bodyItems.some((x) => x.id === b.id), 'пункта нет');
+});
+
 test('база: удаление тестовой базы', async () => {
   await db.deleteDatabase(NAME);
   db.useDatabase('mood-diary');

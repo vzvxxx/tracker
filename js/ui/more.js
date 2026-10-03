@@ -3,14 +3,16 @@ import { h, mount, showToast } from './dom.js';
 import { nameForm } from './forms.js';
 import { CATS, CAT_NAMES, makeEmotion, makeBodyItem, findByName, nextOrder, byOrder, nowIso } from '../model.js';
 import { buildBackup, backupFileName, parseBackup, describeData, describeRange } from '../backup.js';
+import { usageCounts } from '../stats.js';
 
 export function renderMore(root, ctx) {
+  const usage = usageCounts(ctx.store.entries);
   mount(root,
     h('h1', {}, 'Ещё'),
     h('p', { class: 'card-warn' }, 'Не удаляй иконку трекера: вместе с ней удалится дневник. Делай копии.'),
     backupSection(ctx),
-    emotionsSection(ctx),
-    bodySection(ctx));
+    emotionsSection(ctx, usage.emotions),
+    bodySection(ctx, usage.body));
 }
 
 // ---------- Резервная копия ----------
@@ -103,25 +105,41 @@ function orderButtons(ctx, method, item, prev, next) {
     h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Ниже', disabled: !next, onclick: () => swap(ctx, method, item, next) }, '↓'));
 }
 
-function hiddenList(items, onRestore) {
+// Насовсем удаляем только то, чего нет ни в одной записи (used — сколько записей ссылаются).
+async function removeForever(ctx, method, item) {
+  if (!window.confirm(`Удалить «${item.name}» насовсем? В записях этого нет, но вернуть будет нельзя.`)) return;
+  await ctx.db[method](item.id);
+  await ctx.refresh();
+}
+
+function deleteButton(ctx, method, item, used) {
+  if (used.get(item.id)) return null;
+  return h('button', { type: 'button', class: 'link', onclick: () => removeForever(ctx, method, item) }, 'Удалить');
+}
+
+const DELETE_HINT = 'Удалить можно только то, чего нет ни в одной записи. Остальное можно скрыть — старые записи его сохранят.';
+
+function hiddenList(items, onRestore, deleteFor) {
   if (!items.length) return null;
   return h('details', { class: 'block' },
     h('summary', {}, `Скрытые (${items.length})`),
     items.map((x) => h('div', { class: 'dict-row' },
       h('span', { class: 'dict-name' }, x.name),
-      h('button', { type: 'button', class: 'link', onclick: () => onRestore(x) }, 'Вернуть'))));
+      h('button', { type: 'button', class: 'link', onclick: () => onRestore(x) }, 'Вернуть'),
+      deleteFor(x))));
 }
 
 // ---------- Эмоции ----------
 
-function emotionsSection(ctx) {
+function emotionsSection(ctx, used) {
   const all = [...ctx.store.emotions].sort(byOrder);
   return h('section', { class: 'section' },
     h('h2', {}, 'Эмоции'),
     h('p', { class: 'muted' }, '★ — видна сразу на экране записи. Нажми на название, чтобы переименовать.'),
+    h('p', { class: 'muted' }, DELETE_HINT),
     [['heavy', 'Тяжёлое'], ['light', 'Лёгкое']].map(([type, title]) => {
       const list = all.filter((e) => e.type === type && !e.hidden);
-      return [h('p', { class: 'group-title' }, title), list.map((e, i) => emotionRow(ctx, e, list[i - 1], list[i + 1]))];
+      return [h('p', { class: 'group-title' }, title), list.map((e, i) => emotionRow(ctx, e, list[i - 1], list[i + 1], used))];
     }),
     nameForm({
       placeholder: 'Новая эмоция',
@@ -134,10 +152,11 @@ function emotionsSection(ctx) {
         return null;
       },
     }),
-    hiddenList(all.filter((e) => e.hidden), (e) => update(ctx, 'putEmotion', e, { hidden: false })));
+    hiddenList(all.filter((e) => e.hidden), (e) => update(ctx, 'putEmotion', e, { hidden: false }),
+      (e) => deleteButton(ctx, 'deleteEmotion', e, used)));
 }
 
-function emotionRow(ctx, e, prev, next) {
+function emotionRow(ctx, e, prev, next, used) {
   return h('div', { class: 'dict-row' },
     h('button', {
       type: 'button',
@@ -158,20 +177,23 @@ function emotionRow(ctx, e, prev, next) {
       onclick: () => update(ctx, 'putEmotion', e, { type: e.type === 'heavy' ? 'light' : 'heavy' }),
     }, e.type === 'heavy' ? 'сделать лёгкой' : 'сделать тяжёлой'),
     orderButtons(ctx, 'putEmotion', e, prev, next),
-    h('button', { type: 'button', class: 'link', onclick: () => update(ctx, 'putEmotion', e, { hidden: true, favorite: false }) }, 'Скрыть'));
+    h('button', { type: 'button', class: 'link', onclick: () => update(ctx, 'putEmotion', e, { hidden: true, favorite: false }) }, 'Скрыть'),
+    deleteButton(ctx, 'deleteEmotion', e, used));
 }
 
 // ---------- Тело ----------
 
-function bodySection(ctx) {
+function bodySection(ctx, used) {
   const all = [...ctx.store.bodyItems].sort(byOrder);
   const list = all.filter((b) => !b.hidden);
   return h('section', { class: 'section' },
     h('h2', {}, 'Тело'),
+    h('p', { class: 'muted' }, DELETE_HINT),
     list.map((b, i) => h('div', { class: 'dict-row' },
       h('button', { type: 'button', class: 'dict-name', onclick: () => rename(ctx, 'putBodyItem', b, ctx.store.bodyItems) }, b.name),
       orderButtons(ctx, 'putBodyItem', b, list[i - 1], list[i + 1]),
-      h('button', { type: 'button', class: 'link', onclick: () => update(ctx, 'putBodyItem', b, { hidden: true }) }, 'Скрыть'))),
+      h('button', { type: 'button', class: 'link', onclick: () => update(ctx, 'putBodyItem', b, { hidden: true }) }, 'Скрыть'),
+      deleteButton(ctx, 'deleteBodyItem', b, used))),
     nameForm({
       placeholder: 'Новый пункт',
       onSubmit: async ({ name }) => {
@@ -182,5 +204,6 @@ function bodySection(ctx) {
         return null;
       },
     }),
-    hiddenList(all.filter((b) => b.hidden), (b) => update(ctx, 'putBodyItem', b, { hidden: false })));
+    hiddenList(all.filter((b) => b.hidden), (b) => update(ctx, 'putBodyItem', b, { hidden: false }),
+      (b) => deleteButton(ctx, 'deleteBodyItem', b, used)));
 }
