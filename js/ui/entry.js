@@ -41,9 +41,12 @@ export function renderEntry(root, ctx, editId) {
     if (!x) return null;
     return x.strong ? 'strong' : 'on';
   };
-  const chip = (em) => emotionChip(em, stateOf(em.id), {
+  // place — где «таблетка»: наверху или в полном списке (там у каждой свой котик-наклейка).
+  const chipAt = (place) => (em) => emotionChip(em, stateOf(em.id), {
+    stickerKey: `${place}:${em.id}`,
     onClick: () => change(() => { draft.emotions = cycleEmotion(draft.emotions, em.id); }),
   });
+  const chip = chipAt('top');
   // Отмеченные не из избранных (в т. ч. скрытые позже) остаются видны выбранными.
   const extra = draft.emotions
     .map((x) => emotionsById.get(x.emotionId))
@@ -81,7 +84,7 @@ export function renderEntry(root, ctx, editId) {
   const fullList = ui.showAll ? h('div', { class: 'full-list' },
     [['heavy', 'Тяжёлое'], ['light', 'Лёгкое']].map(([type, title]) => [
       h('p', { class: 'group-title' }, title),
-      h('div', { class: 'chips' }, visible.filter((e) => e.type === type).map(chip)),
+      h('div', { class: 'chips' }, visible.filter((e) => e.type === type).map(chipAt('full'))),
     ]),
     h('p', { class: 'group-title' }, 'Добавить свою'),
     nameForm({

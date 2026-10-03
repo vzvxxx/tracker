@@ -2,8 +2,24 @@ import { h } from './dom.js';
 import { CAT_FILES } from '../model.js';
 import { formatSigned } from '../format.js';
 
+// Наклейки, которые уже показывались, переносим в новую «таблетку», а не создаём заново:
+// экран перерисовывается при каждом касании, и новая картинка на iPhone успевает «моргнуть».
+const stickers = new Map(); // stickerKey → <img>
+
+function sticker(emotion, stickerKey) {
+  const src = CAT_FILES[emotion.cat];
+  if (!stickerKey) return h('img', { class: 'sticker', src, alt: 'сильно' });
+  let img = stickers.get(stickerKey);
+  if (!img || img.getAttribute('src') !== src) {
+    img = h('img', { class: 'sticker', src, alt: 'сильно' });
+    stickers.set(stickerKey, img);
+  }
+  return img;
+}
+
 // «Таблетка» эмоции. state: null | 'on' | 'strong'. Сильная — с котиком-наклейкой в углу.
-export function emotionChip(emotion, state, { small = false, onClick = null } = {}) {
+// stickerKey — где на экране «таблетка» (одна и та же эмоция может быть в двух местах).
+export function emotionChip(emotion, state, { small = false, onClick = null, stickerKey = null } = {}) {
   const cls = ['chip', `chip--${emotion.type}`];
   if (state) cls.push('is-on');
   if (state === 'strong') cls.push('is-strong');
@@ -15,7 +31,7 @@ export function emotionChip(emotion, state, { small = false, onClick = null } = 
     'aria-pressed': onClick ? String(Boolean(state)) : null,
   },
   emotion.name,
-  state === 'strong' ? h('img', { class: 'sticker', src: CAT_FILES[emotion.cat], alt: 'сильно' }) : null);
+  state === 'strong' ? sticker(emotion, stickerKey) : null);
 }
 
 export function plainChip(label, { on = false, onClick = null, small = false } = {}) {
