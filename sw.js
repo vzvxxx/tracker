@@ -60,7 +60,9 @@ function withTimeout(promise, ms) {
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
-    const response = await withTimeout(fetch(request), 3000);
+    // no-cache: всегда спрашиваем сервер «файл поменялся?» (без этого GitHub Pages
+    // разрешает браузеру 10 минут отдавать старую копию, и обновления опаздывают).
+    const response = await withTimeout(fetch(request, { cache: 'no-cache' }), 3000);
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
