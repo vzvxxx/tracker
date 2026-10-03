@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Тесты</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; padding: 16px; }
+    .fail { color: #b00020; }
+    #summary { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Тесты трекера</h1>
+  <p id="summary">Идут…</p>
+  <ol id="results"></ol>
+  <script type="module">
+    import { run } from './runner.js';
+    import './smoke.test.js';
+    await run();
+  </script>
+</body>
+</html>

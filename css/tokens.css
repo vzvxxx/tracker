@@ -1,0 +1,76 @@
+/* Все цвета, размеры и шрифты трекера. Менять внешний вид — только здесь. */
+:root {
+  /* Основа */
+  --color-bg: #FFFDFA;
+  --color-field: #F3F3FB;
+  --color-field-border: #E2E0EC;
+  --color-text: #4A3F35;
+  --color-text-soft: #7A7068;
+  --color-text-muted: #9A9089;
+  --color-line: #EEE9E2;
+  --color-card-border: #E4DED6;
+  --color-accent: #42424B;
+  --color-on-accent: #FFFFFF;
+  --color-error: #B3474B;
+  --color-star: #E0B84A;
+
+  /* Шкала «Как я справляюсь»: n = минус, p = плюс */
+  --scale-n5-bg: #8B78C9; --scale-n5-fg: #FFFFFF;
+  --scale-n4-bg: #A595D6; --scale-n4-fg: #FFFFFF;
+  --scale-n3-bg: #BFB2E3; --scale-n3-fg: #3E3270;
+  --scale-n2-bg: #D3C9EE; --scale-n2-fg: #3E3270;
+  --scale-n1-bg: #E6DDF5; --scale-n1-fg: #3E3270;
+  --scale-0-bg:  #F3F1EE; --scale-0-fg:  #7A7068;
+  --scale-p1-bg: #D5EEEA; --scale-p1-fg: #1F5C51;
+  --scale-p2-bg: #B7E0D8; --scale-p2-fg: #1F5C51;
+  --scale-p3-bg: #97CFC4; --scale-p3-fg: #1F5C51;
+  --scale-p4-bg: #78BDB0; --scale-p4-fg: #FFFFFF;
+  --scale-p5-bg: #5BA596; --scale-p5-fg: #FFFFFF;
+
+  /* Эмоции */
+  --heavy-bg: #E6DDF5;
+  --heavy-fg: #3E3270;
+  --heavy-border: #D3C9EE;
+  --heavy-strong-bg: #CFC3EE;
+  --heavy-strong-border: #8B78C9;
+  --light-bg: #D5EEEA;
+  --light-fg: #1F5C51;
+  --light-border: #B7E0D8;
+  --light-strong-bg: #B7E0D8;
+  --light-strong-border: #5BA596;
+
+  /* Выбранные «таблетки» тела и слёз (нейтральный графит) */
+  --plain-on-bg: #E4E3EA;
+  --plain-on-fg: #42424B;
+  --plain-on-border: #42424B;
+
+  /* Итог дня */
+  --avg-bg: #DCE9F7;
+  --avg-fg: #2F4F73;
+  --range-bg: #F6F4F1;
+  --range-fg: #4A3F35;
+  --mixed-bg: #EDE9F6;
+  --mixed-fg: #5B4E8C;
+
+  /* Шрифты: системные, чтобы работало офлайн */
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+
+  /* Размеры */
+  --radius-card: 14px;
+  --radius-chip: 15px;
+  --radius-button: 14px;
+  --radius-scale: 6px;
+  --chip-height: 30px;
+  --chip-height-small: 24px;
+  --sticker-size: 20px;
+  --sticker-size-small: 14px;
+  --decor-size: 18px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --tabbar-height: 56px;
+  --content-width: 480px;
+}
