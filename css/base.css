@@ -1,5 +1,9 @@
 * { box-sizing: border-box; }
 
+/* Двойное касание не приближает страницу (иначе на iPhone промах мимо «таблетки» = зум).
+   Приближение двумя пальцами остаётся. */
+html { touch-action: manipulation; }
+
 html, body {
   margin: 0;
   background: var(--color-bg);
