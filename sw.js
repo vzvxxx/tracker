@@ -1,9 +1,10 @@
-// Service worker: запоминает файлы трекера, чтобы он открывался без интернета.
-// Код и страница — «сначала сеть»: есть интернет — берём свежие файлы (и обновляем запас),
-// нет интернета или сеть молчит дольше 3 секунд — отдаём сохранённые.
-// Картинки — «сначала запас»: они не меняются, ждать сеть незачем.
-// Правило: добавила, удалила или ЗАМЕНИЛА файл (в том числе картинку) — поднять номер CACHE.
-const CACHE = 'diary-v1';
+// Service worker: трекер открывается мгновенно в любой сети, в том числе без интернета.
+// Всё берётся «сначала из запаса». Запас — это целая версия трекера с номером CACHE.
+// Обновление: новый номер → телефон при открытии в фоне скачивает ВСЮ новую версию
+// в отдельный запас и переключается на неё, только когда скачано всё. Версии не смешиваются.
+// ПРАВИЛО: любое изменение файлов сайта → поднять номер CACHE (иначе телефон его не получит);
+// добавила или удалила файл → ещё и поправить список FILES.
+const CACHE = 'diary-v2';
 const FILES = [
   './',
   'index.html',
@@ -37,7 +38,9 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
+  // cache: 'reload' — мимо 10-минутного запаса браузера, чтобы взять именно новую версию.
+  // addAll — всё или ничего: если хоть один файл не скачался, остаётся прежняя версия.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -49,49 +52,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-function withTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (error) => { clearTimeout(timer); reject(error); },
-    );
-  });
-}
+// Локальный сервер разработки (порт 8000 из .claude/launch.json): нужны свежие файлы
+// после каждой правки, поэтому там сначала сеть, а запас — только когда сервер выключен.
+const DEV = self.location.hostname === '127.0.0.1' && self.location.port === '8000';
 
 async function fromCache(cache, request) {
-  const cached = await cache.match(request, { ignoreSearch: true });
-  if (cached) return cached;
-  if (request.mode === 'navigate') return cache.match('index.html');
-  return undefined;
+  return (await cache.match(request, { ignoreSearch: true }))
+    ?? (request.mode === 'navigate' ? cache.match('index.html') : undefined);
 }
 
-async function networkFirst(request) {
+async function fromCacheOrNetwork(request) {
   const cache = await caches.open(CACHE);
-  // Телефон сам знает, что сети нет (авиарежим): не ждём 3 секунды, сразу берём из запаса.
-  if (self.navigator.onLine === false) {
-    const cached = await fromCache(cache, request);
-    if (cached) return cached;
+  if (DEV) {
+    try {
+      return await fetch(request, { cache: 'no-cache' });
+    } catch {
+      return (await fromCache(cache, request)) ?? Response.error();
+    }
   }
-  try {
-    // no-cache: всегда спрашиваем сервер «файл поменялся?» (без этого GitHub Pages
-    // разрешает браузеру 10 минут отдавать старую копию, и обновления опаздывают).
-    const response = await withTimeout(fetch(request, { cache: 'no-cache' }), 3000);
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  } catch {
-    return (await fromCache(cache, request)) ?? Response.error();
-  }
-}
-
-async function cacheFirst(request) {
-  const cache = await caches.open(CACHE);
-  return (await cache.match(request, { ignoreSearch: true })) ?? networkFirst(request);
+  return (await fromCache(cache, request)) ?? fetch(request); // не из версии (страница тестов) — из сети
 }
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
-  event.respondWith(url.pathname.endsWith('.png') ? cacheFirst(request) : networkFirst(request));
+  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  event.respondWith(fromCacheOrNetwork(request));
 });
