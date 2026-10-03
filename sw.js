@@ -1,6 +1,8 @@
 // Service worker: запоминает файлы трекера, чтобы он открывался без интернета.
-// Стратегия «сначала сеть»: есть интернет — берём свежие файлы (и обновляем запас),
+// Код и страница — «сначала сеть»: есть интернет — берём свежие файлы (и обновляем запас),
 // нет интернета или сеть молчит дольше 3 секунд — отдаём сохранённые.
+// Картинки — «сначала запас»: они не меняются, ждать сеть незачем.
+// Правило: добавила, удалила или ЗАМЕНИЛА файл (в том числе картинку) — поднять номер CACHE.
 const CACHE = 'diary-v1';
 const FILES = [
   './',
@@ -57,8 +59,20 @@ function withTimeout(promise, ms) {
   });
 }
 
+async function fromCache(cache, request) {
+  const cached = await cache.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  if (request.mode === 'navigate') return cache.match('index.html');
+  return undefined;
+}
+
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
+  // Телефон сам знает, что сети нет (авиарежим): не ждём 3 секунды, сразу берём из запаса.
+  if (self.navigator.onLine === false) {
+    const cached = await fromCache(cache, request);
+    if (cached) return cached;
+  }
   try {
     // no-cache: всегда спрашиваем сервер «файл поменялся?» (без этого GitHub Pages
     // разрешает браузеру 10 минут отдавать старую копию, и обновления опаздывают).
@@ -66,18 +80,18 @@ async function networkFirst(request) {
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
-    const cached = await cache.match(request, { ignoreSearch: true });
-    if (cached) return cached;
-    if (request.mode === 'navigate') {
-      const page = await cache.match('index.html');
-      if (page) return page;
-    }
-    return Response.error();
+    return (await fromCache(cache, request)) ?? Response.error();
   }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE);
+  return (await cache.match(request, { ignoreSearch: true })) ?? networkFirst(request);
 }
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
-  event.respondWith(networkFirst(request));
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  event.respondWith(url.pathname.endsWith('.png') ? cacheFirst(request) : networkFirst(request));
 });
