@@ -5,6 +5,15 @@ export function settleSwipe(offset, width) {
   return offset >= width / 2 ? 'open' : 'closed';
 }
 
+// Куда движется палец. dx > 0 — влево. null — ещё непонятно (сдвиг меньше 6 px).
+// Свайпом считаем движение до ~50° от горизонтали: большой палец обычно идёт дугой.
+// Закрытую карточку вправо двигать некуда — такое движение не наше (оставляем прокрутке).
+export function swipeDirection(dx, dy, isOpen) {
+  if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return null;
+  if (!isOpen && dx <= 0) return 'vertical';
+  return Math.abs(dx) * 1.2 >= Math.abs(dy) ? 'horizontal' : 'vertical';
+}
+
 const state = new WeakMap(); // строка → { front, offset }
 let openRow = null;
 
@@ -51,8 +60,9 @@ export function swipeable(row, front, actions, { onTap }) {
     const dx = start.x - e.clientX;
     const dy = e.clientY - start.y;
     if (start.horizontal === null) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; // ещё непонятно, куда движется палец
-      start.horizontal = Math.abs(dx) > Math.abs(dy);
+      const direction = swipeDirection(dx, dy, state.get(row).offset > 0);
+      if (!direction) return; // ещё непонятно, куда движется палец
+      start.horizontal = direction === 'horizontal';
       if (!start.horizontal) return; // вертикально — это прокрутка ленты, не мешаем
       try { front.setPointerCapture(e.pointerId); } catch { /* без захвата тоже работает, просто палец может «соскочить» */ }
       if (openRow !== row) closeOpenSwipe();
@@ -76,6 +86,12 @@ export function swipeable(row, front, actions, { onTap }) {
       if (openRow === row) openRow = null;
     }
   };
+  // Решили «вбок» — запрещаем браузеру прокручивать страницу до конца жеста.
+  // Иначе iPhone сам начинает прокрутку, если палец идёт чуть наискосок, и свайп «срывается».
+  front.addEventListener('touchmove', (e) => {
+    if (start && start.horizontal) e.preventDefault();
+  }, { passive: false });
+
   front.addEventListener('pointerup', finish);
   front.addEventListener('pointercancel', finish);
 

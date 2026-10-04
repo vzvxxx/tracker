@@ -1,5 +1,5 @@
 import { test, assertEqual } from './runner.js';
-import { settleSwipe, swipeable } from '../js/ui/swipe.js';
+import { settleSwipe, swipeable, swipeDirection } from '../js/ui/swipe.js';
 
 test('свайп: карточка открывается, если проехала половину ширины кнопок', () => {
   assertEqual(settleSwipe(0, 116), 'closed', 'не двигали');
@@ -33,4 +33,37 @@ test('свайп: касание вне открытой карточки тол
   ev(other, 'pointerdown', 10); other.click();
   assertEqual(otherClicks, 1, 'следующее нажатие работает как обычно');
   box.remove();
+});
+
+test('свайп: куда движется палец (dx > 0 — влево)', () => {
+  assertEqual(swipeDirection(4, 1, false), null, 'меньше 6 пикселей — ещё непонятно');
+  assertEqual(swipeDirection(10, 0, false), 'horizontal', 'ровно влево');
+  assertEqual(swipeDirection(10, 12, false), 'horizontal', 'дуга пальцем ~50° — всё ещё свайп');
+  assertEqual(swipeDirection(10, 14, false), 'vertical', 'круче — это прокрутка');
+  assertEqual(swipeDirection(2, 20, false), 'vertical', 'вверх-вниз');
+  assertEqual(swipeDirection(-10, 0, false), 'vertical', 'вправо у закрытой карточки — не свайп');
+  assertEqual(swipeDirection(-10, 0, true), 'horizontal', 'вправо у открытой — закрыть свайпом');
+});
+
+test('свайп: решив «вбок», запрещаем прокрутку страницы', () => {
+  const row = document.createElement('div');
+  const actions = document.createElement('div');
+  actions.style.width = '100px';
+  const front = document.createElement('button');
+  row.append(actions, front);
+  document.body.append(row);
+  swipeable(row, front, actions, { onTap: () => {} });
+  const pe = (type, x, y) => front.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 2 }));
+  const scrollBlocked = () => {
+    const t = new Event('touchmove', { bubbles: true, cancelable: true });
+    front.dispatchEvent(t);
+    return t.defaultPrevented;
+  };
+  pe('pointerdown', 200, 100); pe('pointermove', 190, 108);
+  assertEqual(scrollBlocked(), true, 'дуга влево — прокрутка запрещена');
+  pe('pointerup', 190, 108);
+  pe('pointerdown', 200, 100); pe('pointermove', 198, 120);
+  assertEqual(scrollBlocked(), false, 'вниз — прокрутка разрешена');
+  pe('pointercancel', 198, 120);
+  row.remove();
 });

@@ -165,8 +165,8 @@
 .swipe-btn--edit .swipe-circle { background: var(--action-edit-bg); }
 .swipe-btn--delete { color: var(--action-delete-fg); }
 .swipe-btn--delete .swipe-circle { background: var(--action-delete-bg); }
-/* Карточка лежит поверх кнопок и едет вбок; pan-y — вертикальная прокрутка остаётся за браузером. */
-.swipe .entry-card { position: relative; z-index: 1; border-bottom: 0; background: var(--color-bg); touch-action: pan-y; transition: transform 0.2s ease; }
+/* Карточка лежит поверх кнопок и едет вбок. Свайп это или прокрутка, решает js/ui/swipe.js. */
+.swipe .entry-card { position: relative; z-index: 1; border-bottom: 0; background: var(--color-bg); transition: transform 0.2s ease; }
 .swipe.is-dragging .entry-card { transition: none; }
 
 /* ---------- Лента ---------- */
