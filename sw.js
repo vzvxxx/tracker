@@ -4,7 +4,7 @@
 // в отдельный запас и переключается на неё, только когда скачано всё. Версии не смешиваются.
 // ПРАВИЛО: любое изменение файлов сайта → поднять номер CACHE (иначе телефон его не получит);
 // добавила или удалила файл → ещё и поправить список FILES.
-const CACHE = 'diary-v2';
+const CACHE = 'diary-v3';
 const FILES = [
   './',
   'index.html',
@@ -25,6 +25,7 @@ const FILES = [
   'js/ui/summary.js',
   'js/ui/feed.js',
   'js/ui/more.js',
+  'js/ui/backup-actions.js',
   'assets/cat-crying.png',
   'assets/cat-angry.png',
   'assets/cat-scared.png',

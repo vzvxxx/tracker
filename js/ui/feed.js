@@ -2,6 +2,8 @@
 import { h, mount, decor } from './dom.js';
 import { emotionChip, scoreSquare } from './chips.js';
 import { summaryBlock, summaryButton, isEditingSummary } from './summary.js';
+import { downloadBackup } from './backup-actions.js';
+import { backupReminder, reminderText } from '../backup.js';
 import { groupByDay, isMixed, daySummary } from '../stats.js';
 import { dayKey, isNight, TEARS_LABELS } from '../model.js';
 import { formatDayTitle, formatTime, formatSigned } from '../format.js';
@@ -23,8 +25,17 @@ export function renderFeed(root, ctx) {
   const otherDays = [...byDay.keys()].filter((d) => d !== today).sort().reverse();
   const todayHasSummary = maps.summaryByDay.has(today) || isEditingSummary(today);
 
+  const reminder = backupReminder({
+    now,
+    entriesCount: ctx.store.entries.length,
+    backup: ctx.store.backup,
+    snoozeDay: ctx.store.backupSnooze,
+    currentFingerprint: ctx.store.fingerprint,
+  });
+
   mount(root,
     h('h1', {}, 'Лента', decor('flower', 'decor decor--inline')),
+    reminder ? backupBanner(reminder, ctx) : null,
     h('h2', { class: 'day-title' }, formatDayTitle(today, today) + (isNight(now) ? ' · ночь' : '')),
     todayHasSummary ? summaryBlock(today, todayEntries, ctx, maps) : null,
     todayEntries.length ? todayEntries.map((e) => entryCard(e, ctx, maps)) : emptyDay(),
@@ -33,6 +44,19 @@ export function renderFeed(root, ctx) {
     otherDays.map((day) => (expanded.has(day)
       ? openDay(day, byDay.get(day), ctx, maps, today)
       : dayRow(day, byDay.get(day), ctx, maps, today))));
+}
+
+// Плашка «пора сделать копию». «Позже» прячет её до завтра (граница дня 6:00).
+function backupBanner(reminder, ctx) {
+  const later = async () => {
+    await ctx.db.putSetting({ id: 'backupSnooze', day: dayKey(new Date()) });
+    await ctx.refresh();
+  };
+  return h('section', { class: 'backup-banner', role: 'status' },
+    h('p', { class: 'backup-banner-msg' }, decor('heart'), h('span', {}, reminderText(reminder)), decor('flower')),
+    h('div', { class: 'row' },
+      h('button', { type: 'button', class: 'button button--small', onclick: () => downloadBackup(ctx) }, 'Скачать копию'),
+      h('button', { type: 'button', class: 'link', onclick: later }, 'Позже')));
 }
 
 function emptyDay() {

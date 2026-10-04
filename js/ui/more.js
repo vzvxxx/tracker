@@ -2,7 +2,8 @@
 import { h, mount, showToast } from './dom.js';
 import { nameForm } from './forms.js';
 import { CATS, CAT_NAMES, makeEmotion, makeBodyItem, findByName, nextOrder, byOrder, nowIso } from '../model.js';
-import { buildBackup, backupFileName, parseBackup, describeData, describeRange } from '../backup.js';
+import { parseBackup, describeData, describeRange, describeLastBackup } from '../backup.js';
+import { downloadBackup, markBackedUp } from './backup-actions.js';
 import { usageCounts } from '../stats.js';
 
 export function renderMore(root, ctx) {
@@ -29,30 +30,10 @@ function backupSection(ctx) {
     h('h2', {}, 'Резервная копия'),
     h('p', { class: 'muted' }, 'Сохрани файл в «Файлы», iCloud или отправь себе в Telegram.'),
     h('div', { class: 'row' },
-      h('button', { type: 'button', class: 'button', onclick: () => download(ctx) }, 'Скачать копию'),
+      h('button', { type: 'button', class: 'button', onclick: () => downloadBackup(ctx) }, 'Скачать копию'),
       h('button', { type: 'button', class: 'button', onclick: () => fileInput.click() }, 'Восстановить из копии')),
+    h('p', { class: 'muted backup-last' }, describeLastBackup(ctx.store.backup)),
     fileInput);
-}
-
-async function download(ctx) {
-  const json = JSON.stringify(buildBackup(await ctx.db.exportAll()), null, 2);
-  const name = backupFileName();
-  const file = new File([json], name, { type: 'application/json' });
-  // На iPhone удобнее всего меню «Поделиться»: «Сохранить в Файлы», Telegram, AirDrop.
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: name });
-      return;
-    } catch (error) {
-      if (error.name === 'AbortError') return; // передумала — ничего не делаем
-    }
-  }
-  const url = URL.createObjectURL(file);
-  const link = h('a', { href: url, download: name });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 async function restore(input, ctx) {
@@ -71,7 +52,8 @@ async function restore(input, ctx) {
     window.alert('Не получилось восстановить. Ничего не изменилось.');
     return;
   }
-  await ctx.refresh();
+  // Дневник теперь совпадает с файлом копии: терять нечего, «последняя копия» — дата файла.
+  await markBackedUp(ctx, parsed.exportedAt ?? undefined);
   showToast('Копия восстановлена');
 }
 

@@ -148,6 +148,13 @@
 .empty-day .decor { height: 32px; }
 .empty-title { margin: var(--space-2) 0 2px; font-family: var(--font-heading); font-size: 16px; }
 
+/* ---------- Плашка «пора сделать копию» (вверху «Ленты») ---------- */
+.backup-banner { margin-top: var(--space-3); padding: 12px; border-radius: var(--radius-card); background: var(--range-bg); color: var(--range-fg); }
+.backup-banner-msg { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; line-height: 1.45; }
+.backup-banner-msg .decor { flex: none; }
+.backup-banner .row { margin-top: var(--space-2); }
+.backup-last { margin-top: var(--space-2); }
+
 /* ---------- Лента ---------- */
 .day-title { margin: var(--space-4) 0 var(--space-1); font-family: var(--font-body); font-size: 13px; color: var(--color-text-soft); }
 .entry-card { display: flex; gap: 10px; width: 100%; padding: 10px 0; text-align: left; border-bottom: 1px solid var(--color-line); }

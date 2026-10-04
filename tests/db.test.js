@@ -70,7 +70,43 @@ test('база: эмоция и пункт «Тела» удаляются на�
   assert(!all.bodyItems.some((x) => x.id === b.id), 'пункта нет');
 });
 
+test('база: служебная полка settings не попадает в копию и не стирается восстановлением', async () => {
+  await db.putSetting({ id: 'backup', lastAt: '2026-10-03T12:00:00.000Z', fingerprint: 'A' });
+  assertEqual(await db.getSetting('backup'), { id: 'backup', lastAt: '2026-10-03T12:00:00.000Z', fingerprint: 'A' });
+  assertEqual(await db.getSetting('нет такой'), undefined);
+  const all = await db.exportAll();
+  assertEqual(Object.keys(all), ['entries', 'daySummaries', 'emotions', 'bodyItems'], 'в копии только дневник');
+  await db.replaceAll({ entries: [], daySummaries: [], emotions: [], bodyItems: [] });
+  assertEqual((await db.getSetting('backup')).fingerprint, 'A', 'восстановление не стёрло settings');
+});
+
 test('база: удаление тестовой базы', async () => {
   await db.deleteDatabase(NAME);
+  db.useDatabase('mood-diary');
+});
+
+test('база: обновление с версии 1 сохраняет записи и добавляет settings', async () => {
+  const name = `test-upgrade-${Date.now()}`;
+  const entry = sample();
+  // Старая база версии 1 — как на телефоне до обновления.
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, 1);
+    req.onupgradeneeded = () => {
+      for (const s of ['entries', 'daySummaries', 'emotions', 'bodyItems']) req.result.createObjectStore(s, { keyPath: 'id' });
+    };
+    req.onsuccess = () => {
+      const d = req.result;
+      const tx = d.transaction('entries', 'readwrite');
+      tx.objectStore('entries').put(entry);
+      tx.oncomplete = () => { d.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+    req.onerror = () => reject(req.error);
+  });
+  db.useDatabase(name);
+  assertEqual((await db.exportAll()).entries, [entry], 'запись на месте');
+  await db.putSetting({ id: 'backupSnooze', day: '2026-10-04' });
+  assertEqual((await db.getSetting('backupSnooze')).day, '2026-10-04', 'полка settings появилась');
+  await db.deleteDatabase(name);
   db.useDatabase('mood-diary');
 });

@@ -53,7 +53,12 @@ export function parseBackup(text) {
   for (const k of KEYS) {
     if (!Array.isArray(obj[k]) || !obj[k].every(VALID[k])) return fail('Файл копии повреждён.');
   }
-  return { ok: true, data: { entries: obj.entries, daySummaries: obj.daySummaries, emotions: obj.emotions, bodyItems: obj.bodyItems } };
+  const exportedAt = isStr(obj.exportedAt) && !Number.isNaN(Date.parse(obj.exportedAt)) ? obj.exportedAt : null;
+  return {
+    ok: true,
+    exportedAt, // когда сделана копия — станет «последней копией» после восстановления
+    data: { entries: obj.entries, daySummaries: obj.daySummaries, emotions: obj.emotions, bodyItems: obj.bodyItems },
+  };
 }
 
 export function describeData(data) {
@@ -66,4 +71,37 @@ export function describeRange({ count, from, to }) {
   if (!from) return base;
   if (from === to) return `${base} (за ${formatDayShort(from)})`;
   return `${base} (с ${formatDayShort(from)} по ${formatDayShort(to)})`;
+}
+
+// ---------- Напоминание о копии ----------
+
+export const BACKUP_EVERY_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Отпечаток дневника: любое изменение данных (даже одна буква или удаление) даёт другой.
+export async function fingerprint(data) {
+  const text = JSON.stringify(KEYS.map((k) => data[k]));
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Показывать ли плашку в «Ленте». null — не показывать.
+// backup: { lastAt, fingerprint } | null; snoozeDay — день (граница 6:00), когда нажато «Позже».
+export function backupReminder({ now = new Date(), entriesCount, backup, snoozeDay, currentFingerprint }) {
+  if (entriesCount === 0) return null;
+  if (snoozeDay === dayKey(now)) return null;
+  if (!backup) return { kind: 'first' };
+  if (backup.fingerprint === currentFingerprint) return null; // с прошлой копии ничего не изменилось
+  const days = Math.floor((now - new Date(backup.lastAt)) / DAY_MS);
+  return days >= BACKUP_EVERY_DAYS ? { kind: 'stale', days } : null;
+}
+
+export function reminderText(reminder) {
+  if (reminder.kind === 'first') return 'Копий ещё не было. Сделай первую — так дневник не потеряется.';
+  const days = `${reminder.days} ${plural(reminder.days, ['день', 'дня', 'дней'])}`;
+  return `Последняя копия — ${days} назад. С тех пор в дневнике появилось новое.`;
+}
+
+export function describeLastBackup(backup) {
+  return backup ? `Последняя копия: ${formatDayShort(toYmd(new Date(backup.lastAt)))}` : 'Копий ещё не было';
 }

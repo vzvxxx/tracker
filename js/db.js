@@ -1,8 +1,11 @@
 // Модуль хранения. ЕДИНСТВЕННОЕ место, которое знает про IndexedDB.
 // При переезде на сервер меняется только этот файл.
 
+// Полки дневника — они попадают в копию. settings — служебная полка про сам телефон
+// (дата последней копии, «Позже»), в копию не попадает. Появилась в версии базы 2.
 const STORES = ['entries', 'daySummaries', 'emotions', 'bodyItems'];
-const VERSION = 1;
+const SETTINGS = 'settings';
+const VERSION = 2;
 let dbName = 'mood-diary';
 let opening = null;
 
@@ -17,7 +20,8 @@ function open() {
       const req = indexedDB.open(dbName, VERSION);
       req.onupgradeneeded = () => {
         const d = req.result;
-        for (const s of STORES) {
+        // Создаём только недостающие полки: при обновлении 1 → 2 старые данные не трогаются.
+        for (const s of [...STORES, SETTINGS]) {
           if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' });
         }
       };
@@ -65,6 +69,12 @@ export const putEmotion = (emotion) => put('emotions', emotion);
 export const putBodyItem = (item) => put('bodyItems', item);
 export const deleteEmotion = (id) => remove('emotions', id);
 export const deleteBodyItem = (id) => remove('bodyItems', id);
+export const putSetting = (setting) => put(SETTINGS, setting);
+
+export async function getSetting(id) {
+  const d = await open();
+  return result(d.transaction(SETTINGS).objectStore(SETTINGS).get(id));
+}
 
 export async function exportAll() {
   const d = await open();

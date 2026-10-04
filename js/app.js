@@ -1,19 +1,26 @@
 // Запуск трекера: база, данные в памяти, переключение экранов.
 import * as db from './db.js';
 import { seedEmotions, seedBodyItems } from './model.js';
+import { fingerprint } from './backup.js';
 import { renderEntry } from './ui/entry.js';
 import { renderFeed } from './ui/feed.js';
 import { renderMore } from './ui/more.js';
 
 const SCREENS = ['entry', 'feed', 'more'];
-const store = { entries: [], daySummaries: [], emotions: [], bodyItems: [] };
+// Данные дневника + служебное про копию: когда была последняя, «Позже», отпечаток дневника сейчас.
+const store = { entries: [], daySummaries: [], emotions: [], bodyItems: [], backup: null, backupSnooze: null, fingerprint: '' };
 const state = { screen: 'entry', entryId: null };
 
 const ctx = {
   store,
   db,
   async refresh() {
-    Object.assign(store, await db.exportAll());
+    const data = await db.exportAll();
+    Object.assign(store, data, {
+      backup: (await db.getSetting('backup')) ?? null,
+      backupSnooze: (await db.getSetting('backupSnooze'))?.day ?? null,
+      fingerprint: await fingerprint(data),
+    });
     render();
   },
   rerender() {
