@@ -8,6 +8,7 @@ import {
 } from '../model.js';
 import { isMixed } from '../stats.js';
 import { toLocalInput, fromLocalInput } from '../format.js';
+import { deleteEntryConfirmed } from './entry-actions.js';
 
 let newDraft = emptyDraft(); // черновик новой записи живёт, пока не сохранишь
 let edit = null; // { id, draft } — когда правим старую запись
@@ -69,10 +70,8 @@ export function renderEntry(root, ctx, editId) {
   }
 
   async function remove() {
-    if (!window.confirm('Точно удалить? Вернуть запись будет нельзя.')) return;
-    await ctx.db.deleteEntry(edit.id);
+    if (!(await deleteEntryConfirmed(ctx, edit.id))) return;
     edit = null;
-    await ctx.refresh();
     ctx.navigate('feed');
   }
 

@@ -44,6 +44,13 @@
   --plain-on-fg: #42424B;
   --plain-on-border: #42424B;
 
+  /* Кнопки свайпа записи */
+  --action-edit-bg: var(--heavy-bg);
+  --action-edit-fg: var(--heavy-fg);
+  --action-delete-bg: #F6E3E4;
+  --action-delete-fg: var(--color-error);
+  --swipe-circle: 32px;
+
   /* Итог дня */
   --avg-bg: #DCE9F7;
   --avg-fg: #2F4F73;

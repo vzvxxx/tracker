@@ -3,6 +3,8 @@ import { h, mount, decor } from './dom.js';
 import { emotionChip, scoreSquare } from './chips.js';
 import { summaryBlock, summaryButton, isEditingSummary } from './summary.js';
 import { downloadBackup } from './backup-actions.js';
+import { swipeable, closeOpenSwipe } from './swipe.js';
+import { deleteEntryConfirmed } from './entry-actions.js';
 import { backupReminder, reminderText } from '../backup.js';
 import { groupByDay, isMixed, daySummary } from '../stats.js';
 import { dayKey, isNight, TEARS_LABELS } from '../model.js';
@@ -38,7 +40,7 @@ export function renderFeed(root, ctx) {
     reminder ? backupBanner(reminder, ctx) : null,
     h('h2', { class: 'day-title' }, formatDayTitle(today, today) + (isNight(now) ? ' · ночь' : '')),
     todayHasSummary ? summaryBlock(today, todayEntries, ctx, maps) : null,
-    todayEntries.length ? todayEntries.map((e) => entryCard(e, ctx, maps)) : emptyDay(),
+    todayEntries.length ? todayEntries.map((e) => entryRow(e, ctx, maps)) : emptyDay(),
     todayHasSummary ? null : summaryButton(today, ctx),
     otherDays.length ? h('div', { class: 'decor-divider', 'aria-hidden': 'true' }, decor('flower'), decor('heart'), decor('flower')) : null,
     otherDays.map((day) => (expanded.has(day)
@@ -66,7 +68,34 @@ function emptyDay() {
     h('p', { class: 'muted' }, 'Запиши, как ты, когда захочется'));
 }
 
-function entryCard(entry, ctx, maps) {
+// Значки кнопок свайпа — встроенные рисунки, без шрифтов из интернета (работает офлайн).
+const ICONS = {
+  edit: '<path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
+  delete: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/>',
+};
+
+function swipeButton(kind, label, onClick) {
+  const circle = h('span', { class: 'swipe-circle', 'aria-hidden': 'true' });
+  circle.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[kind]}</svg>`;
+  return h('button', { type: 'button', class: `swipe-btn swipe-btn--${kind}`, onclick: onClick }, circle, label);
+}
+
+// Карточка записи со свайпом влево: сзади кружки «Изменить» и «Удалить».
+function entryRow(entry, ctx, maps) {
+  const open = () => { closeOpenSwipe(); ctx.navigate('entry', { entryId: entry.id }); };
+  const remove = async () => {
+    if (!(await deleteEntryConfirmed(ctx, entry.id))) closeOpenSwipe();
+  };
+  const card = entryCard(entry, maps);
+  const actions = h('div', { class: 'swipe-actions' },
+    swipeButton('edit', 'Изменить', open),
+    swipeButton('delete', 'Удалить', remove));
+  const row = h('div', { class: 'swipe' }, actions, card);
+  swipeable(row, card, actions, { onTap: open });
+  return row;
+}
+
+function entryCard(entry, maps) {
   const chips = entry.emotions
     .map((x) => {
       const em = maps.emotionsById.get(x.emotionId);
@@ -74,7 +103,7 @@ function entryCard(entry, ctx, maps) {
     });
   const extras = entry.body.map((id) => maps.bodyById.get(id)?.name).filter(Boolean);
   if (entry.tears) extras.push(TEARS_LABELS[entry.tears]);
-  return h('button', { type: 'button', class: 'entry-card', onclick: () => ctx.navigate('entry', { entryId: entry.id }) },
+  return h('button', { type: 'button', class: 'entry-card' },
     scoreSquare(entry.coping),
     h('span', { class: 'entry-card-body' },
       h('span', { class: 'entry-card-meta' },
@@ -115,5 +144,5 @@ function openDay(day, entries, ctx, maps, today) {
       onclick: () => { expanded.delete(day); ctx.rerender(); },
     }, formatDayTitle(day, today), own ? decor('heart', 'decor decor--inline') : null),
     summaryBlock(day, entries, ctx, maps),
-    entries.map((e) => entryCard(e, ctx, maps)));
+    entries.map((e) => entryRow(e, ctx, maps)));
 }
