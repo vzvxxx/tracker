@@ -19,6 +19,21 @@ export function closeOpenSwipe() {
   openRow = null;
 }
 
+// Касание в любом месте вне открытой карточки только закрывает её (как в «Почте»):
+// само нажатие при этом не срабатывает — случайно ничего не откроется.
+// Касания по самой открытой карточке и её кнопкам обрабатывает swipeable.
+let swallowClick = false;
+document.addEventListener('pointerdown', (e) => {
+  swallowClick = Boolean(openRow && openRow.isConnected && !openRow.contains(e.target));
+  if (swallowClick) closeOpenSwipe();
+}, true);
+document.addEventListener('click', (e) => {
+  if (!swallowClick) return;
+  swallowClick = false;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
 // row — обёртка, front — карточка (едет), actions — кнопки сзади.
 // onTap — обычное нажатие на закрытую карточку.
 export function swipeable(row, front, actions, { onTap }) {
